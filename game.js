@@ -33,10 +33,17 @@ const player = {
     attacking: false,
     attackCooldown: 0,
     attackDuration: 15, // frames
-    currentFrame: 0,
-    frameCount: 4, // Assuming 4 frames for walking animation
-    animationSpeed: 8, // frames per second
+    currentAnimation: "idle", // idle, walk, jump, attack
+    animationFrame: 0,
     animationTimer: 0,
+    animationSpeed: 10, // frames per second for animation update
+    spriteSheet: null, // Placeholder for actual sprite sheet image
+    animations: { // Define animation frames and their properties
+        idle: { frames: 4, row: 0, frameWidth: 100, frameHeight: 80 },
+        walk: { frames: 6, row: 1, frameWidth: 100, frameHeight: 80 },
+        jump: { frames: 1, row: 2, frameWidth: 100, frameHeight: 80 },
+        attack: { frames: 3, row: 3, frameWidth: 100, frameHeight: 80 }
+    }
 };
 
 // Ground level
@@ -45,13 +52,13 @@ const groundLevel = canvas.height - 80;
 // Enemies (Meme Coins) - Placeholders for illustrated sprites
 let enemies = [];
 const enemyTypes = [
-    { name: "PEPE", color: "#4CAF50", width: 80, height: 80, health: 60, damage: 15, speed: 2, points: 100, weapon: "tongue" },
-    { name: "BONK", color: "#FFC107", width: 70, height: 70, health: 50, damage: 12, speed: 2.5, points: 80, weapon: "bone" },
-    { name: "DOGE", color: "#FF9800", width: 90, height: 90, health: 70, damage: 18, speed: 1.8, points: 120, weapon: "shiba-claw" },
-    { name: "WOJAK", color: "#B0BEC5", width: 60, height: 60, health: 40, damage: 10, speed: 3, points: 70, weapon: "sad-tear" },
-    { name: "SHIB", color: "#E57373", width: 85, height: 85, health: 65, damage: 16, speed: 1.9, points: 110, weapon: "katana" },
-    { name: "FLOKI", color: "#9CCC65", width: 75, height: 75, health: 55, damage: 13, speed: 2.2, points: 90, weapon: "axe" },
-    { name: "BABYDOGE", color: "#81D4FA", width: 65, height: 65, health: 45, damage: 11, speed: 2.8, points: 75, weapon: "pacifier" }
+    { name: "PEPE", color: "#4CAF50", width: 80, height: 80, health: 60, damage: 15, speed: 2, points: 100, weapon: "tongue", spriteSheet: null, animations: { idle: { frames: 4, row: 0, frameWidth: 80, frameHeight: 80 }, walk: { frames: 6, row: 1, frameWidth: 80, frameHeight: 80 } } },
+    { name: "BONK", color: "#FFC107", width: 70, height: 70, health: 50, damage: 12, speed: 2.5, points: 80, weapon: "bone", spriteSheet: null, animations: { idle: { frames: 4, row: 0, frameWidth: 70, frameHeight: 70 }, walk: { frames: 6, row: 1, frameWidth: 70, frameHeight: 70 } } },
+    { name: "DOGE", color: "#FF9800", width: 90, height: 90, health: 70, damage: 18, speed: 1.8, points: 120, weapon: "shiba-claw", spriteSheet: null, animations: { idle: { frames: 4, row: 0, frameWidth: 90, frameHeight: 90 }, walk: { frames: 6, row: 1, frameWidth: 90, frameHeight: 90 } } },
+    { name: "WOJAK", color: "#B0BEC5", width: 60, height: 60, health: 40, damage: 10, speed: 3, points: 70, weapon: "sad-tear", spriteSheet: null, animations: { idle: { frames: 4, row: 0, frameWidth: 60, frameHeight: 60 }, walk: { frames: 6, row: 1, frameWidth: 60, frameHeight: 60 } } },
+    { name: "SHIB", color: "#E57373", width: 85, height: 85, health: 65, damage: 16, speed: 1.9, points: 110, weapon: "katana", spriteSheet: null, animations: { idle: { frames: 4, row: 0, frameWidth: 85, frameHeight: 85 }, walk: { frames: 6, row: 1, frameWidth: 85, frameHeight: 85 } } },
+    { name: "FLOKI", color: "#9CCC65", width: 75, height: 75, health: 55, damage: 13, speed: 2.2, points: 90, weapon: "axe", spriteSheet: null, animations: { idle: { frames: 4, row: 0, frameWidth: 75, frameHeight: 75 }, walk: { frames: 6, row: 1, frameWidth: 75, frameHeight: 75 } } },
+    { name: "BABYDOGE", color: "#81D4FA", width: 65, height: 65, health: 45, damage: 11, speed: 2.8, points: 75, weapon: "pacifier", spriteSheet: null, animations: { idle: { frames: 4, row: 0, frameWidth: 65, frameHeight: 65 }, walk: { frames: 6, row: 1, frameWidth: 65, frameHeight: 65 } } }
 ];
 
 // Coins
@@ -132,6 +139,8 @@ function startGame() {
     player.isGrounded = true;
     player.attacking = false;
     player.attackCooldown = 0;
+    player.currentAnimation = "idle";
+    player.animationFrame = 0;
 
     // Start demo timer
     demoTimeRemaining = 180;
@@ -212,55 +221,64 @@ function drawPlayer() {
     // In a real game, you would draw a sprite sheet frame here
     // For now, we draw a stylized dolphin using canvas API
 
-    // Body
-    ctx.fillStyle = "#4A90E2"; // Blue
-    ctx.beginPath();
-    ctx.ellipse(player.width / 2, player.height / 2 + 10, player.width / 2 - 10, player.height / 2 - 10, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // If a sprite sheet is loaded, draw from it
+    if (player.spriteSheet) {
+        const anim = player.animations[player.currentAnimation];
+        const sx = anim.frameWidth * player.animationFrame;
+        const sy = anim.row * anim.frameHeight;
+        ctx.drawImage(player.spriteSheet, sx, sy, anim.frameWidth, anim.frameHeight, 0, 0, player.width, player.height);
+    } else {
+        // Fallback drawing if no sprite sheet
+        // Body
+        ctx.fillStyle = "#4A90E2"; // Blue
+        ctx.beginPath();
+        ctx.ellipse(player.width / 2, player.height / 2 + 10, player.width / 2 - 10, player.height / 2 - 10, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Muscular Chest/Shoulders
-    ctx.fillStyle = "#357ABD"; // Darker blue
-    ctx.beginPath();
-    ctx.ellipse(player.width / 2, player.height / 2 - 5, player.width / 2 - 20, player.height / 2 - 25, 0, 0, Math.PI * 2);
-    ctx.fill();
+        // Muscular Chest/Shoulders
+        ctx.fillStyle = "#357ABD"; // Darker blue
+        ctx.beginPath();
+        ctx.ellipse(player.width / 2, player.height / 2 - 5, player.width / 2 - 20, player.height / 2 - 25, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Head
-    ctx.fillStyle = "#4A90E2";
-    ctx.beginPath();
-    ctx.ellipse(player.width / 2 + 20, player.height / 2 - 20, 30, 25, -Math.PI / 8, 0, Math.PI * 2);
-    ctx.fill();
+        // Head
+        ctx.fillStyle = "#4A90E2";
+        ctx.beginPath();
+        ctx.ellipse(player.width / 2 + 20, player.height / 2 - 20, 30, 25, -Math.PI / 8, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Snout
-    ctx.fillStyle = "#357ABD";
-    ctx.beginPath();
-    ctx.ellipse(player.width / 2 + 45, player.height / 2 - 20, 20, 10, -Math.PI / 8, 0, Math.PI * 2);
-    ctx.fill();
+        // Snout
+        ctx.fillStyle = "#357ABD";
+        ctx.beginPath();
+        ctx.ellipse(player.width / 2 + 45, player.height / 2 - 20, 20, 10, -Math.PI / 8, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Eye
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(player.width / 2 + 30, player.height / 2 - 28, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "black";
-    ctx.beginPath();
-    ctx.arc(player.width / 2 + 32, player.height / 2 - 28, 2, 0, Math.PI * 2);
-    ctx.fill();
+        // Eye
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(player.width / 2 + 30, player.height / 2 - 28, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(player.width / 2 + 32, player.height / 2 - 28, 2, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Fins (simplified for now)
-    ctx.fillStyle = "#357ABD";
-    ctx.beginPath();
-    ctx.moveTo(player.width / 2 - 30, player.height / 2 + 30);
-    ctx.lineTo(player.width / 2 - 50, player.height / 2 + 50);
-    ctx.lineTo(player.width / 2 - 10, player.height / 2 + 50);
-    ctx.closePath();
-    ctx.fill();
+        // Fins (simplified for now)
+        ctx.fillStyle = "#357ABD";
+        ctx.beginPath();
+        ctx.moveTo(player.width / 2 - 30, player.height / 2 + 30);
+        ctx.lineTo(player.width / 2 - 50, player.height / 2 + 50);
+        ctx.lineTo(player.width / 2 - 10, player.height / 2 + 50);
+        ctx.closePath();
+        ctx.fill();
 
-    ctx.beginPath();
-    ctx.moveTo(player.width / 2 + 30, player.height / 2 + 30);
-    ctx.lineTo(player.width / 2 + 50, player.height / 2 + 50);
-    ctx.lineTo(player.width / 2 + 10, player.height / 2 + 50);
-    ctx.closePath();
-    ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(player.width / 2 + 30, player.height / 2 + 30);
+        ctx.lineTo(player.width / 2 + 50, player.height / 2 + 50);
+        ctx.lineTo(player.width / 2 + 10, player.height / 2 + 50);
+        ctx.closePath();
+        ctx.fill();
+    }
 
     // Attack animation (simple visual effect)
     if (player.attacking) {
@@ -278,39 +296,45 @@ function drawPlayer() {
 function drawEnemy(enemy) {
     ctx.save();
     
-    // Placeholder for actual illustrated sprite
-    // For now, drawing a stylized blob with features
+    // If a sprite sheet is loaded, draw from it
+    if (enemy.spriteSheet) {
+        const anim = enemy.animations[enemy.currentAnimation || "idle"];
+        const sx = anim.frameWidth * enemy.animationFrame;
+        const sy = anim.row * anim.frameHeight;
+        ctx.drawImage(enemy.spriteSheet, sx, sy, anim.frameWidth, anim.frameHeight, enemy.x, enemy.y, enemy.width, enemy.height);
+    } else {
+        // Fallback drawing if no sprite sheet
+        ctx.fillStyle = enemy.color;
+        ctx.beginPath();
+        ctx.ellipse(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.width / 2, enemy.height / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    ctx.fillStyle = enemy.color;
-    ctx.beginPath();
-    ctx.ellipse(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.width / 2, enemy.height / 2, 0, 0, Math.PI * 2);
-    ctx.fill();
+        // Eyes
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(enemy.x + enemy.width / 2 - 15, enemy.y + enemy.height / 2 - 10, 10, 0, Math.PI * 2);
+        ctx.arc(enemy.x + enemy.width / 2 + 15, enemy.y + enemy.height / 2 - 10, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(enemy.x + enemy.width / 2 - 15, enemy.y + enemy.height / 2 - 10, 4, 0, Math.PI * 2);
+        ctx.arc(enemy.x + enemy.width / 2 + 15, enemy.y + enemy.height / 2 - 10, 4, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Eyes
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(enemy.x + enemy.width / 2 - 15, enemy.y + enemy.height / 2 - 10, 10, 0, Math.PI * 2);
-    ctx.arc(enemy.x + enemy.width / 2 + 15, enemy.y + enemy.height / 2 - 10, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "black";
-    ctx.beginPath();
-    ctx.arc(enemy.x + enemy.width / 2 - 15, enemy.y + enemy.height / 2 - 10, 4, 0, Math.PI * 2);
-    ctx.arc(enemy.x + enemy.width / 2 + 15, enemy.y + enemy.height / 2 - 10, 4, 0, Math.PI * 2);
-    ctx.fill();
+        // Mouth
+        ctx.fillStyle = "#A0522D"; // Brownish
+        ctx.beginPath();
+        ctx.arc(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2 + 20, 15, 0, Math.PI, false);
+        ctx.fill();
 
-    // Mouth
-    ctx.fillStyle = "#A0522D"; // Brownish
-    ctx.beginPath();
-    ctx.arc(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2 + 20, 15, 0, Math.PI, false);
-    ctx.fill();
-
-    // Weapon (simplified placeholder)
-    ctx.fillStyle = "#8B4513"; // Brown
-    if (enemy.weapon === "tongue") {
-        ctx.fillRect(enemy.x + enemy.width / 2 - 5, enemy.y + enemy.height / 2 + 35, 10, 20);
-    } else if (enemy.weapon === "bone") {
-        ctx.fillRect(enemy.x + enemy.width / 2 + 30, enemy.y + enemy.height / 2 - 20, 10, 40);
-    } // Add more weapon drawings as needed
+        // Weapon (simplified placeholder)
+        ctx.fillStyle = "#8B4513"; // Brown
+        if (enemy.weapon === "tongue") {
+            ctx.fillRect(enemy.x + enemy.width / 2 - 5, enemy.y + enemy.height / 2 + 35, 10, 20);
+        } else if (enemy.weapon === "bone") {
+            ctx.fillRect(enemy.x + enemy.width / 2 + 30, enemy.y + enemy.height / 2 - 20, 10, 40);
+        } // Add more weapon drawings as needed
+    }
 
     // Health bar
     ctx.fillStyle = "#333";
@@ -448,7 +472,7 @@ function drawDetailedPalmTree(x, y) {
 
 // Update Player
 function updatePlayer() {
-    // Horizontal movement
+    // Determine player animation state
     let moving = false;
     if (keys.a || keys.ArrowLeft) {
         player.x -= player.speed;
@@ -461,15 +485,22 @@ function updatePlayer() {
         moving = true;
     }
 
-    // Animation update
-    if (moving && player.isGrounded) {
-        player.animationTimer++;
-        if (player.animationTimer >= player.animationSpeed) {
-            player.currentFrame = (player.currentFrame + 1) % player.frameCount;
-            player.animationTimer = 0;
-        }
-    } else if (player.isGrounded) {
-        player.currentFrame = 0; // Idle frame
+    if (player.isJumping) {
+        player.currentAnimation = "jump";
+    } else if (player.attacking) {
+        player.currentAnimation = "attack";
+    } else if (moving) {
+        player.currentAnimation = "walk";
+    } else {
+        player.currentAnimation = "idle";
+    }
+
+    // Update animation frame
+    player.animationTimer++;
+    if (player.animationTimer >= player.animationSpeed) {
+        const anim = player.animations[player.currentAnimation];
+        player.animationFrame = (player.animationFrame + 1) % anim.frames;
+        player.animationTimer = 0;
     }
 
     // Jump
@@ -545,7 +576,11 @@ function spawnEnemy() {
             height: type.height,
             ...type,
             maxHealth: type.health,
-            dx: -type.speed // Move left
+            dx: -type.speed, // Move left
+            currentAnimation: "walk", // Enemies always walk
+            animationFrame: 0,
+            animationTimer: 0,
+            animationSpeed: 12 // Enemy animation speed
         });
     }
 }
@@ -555,6 +590,14 @@ function updateEnemies() {
     enemies.forEach((enemy, index) => {
         enemy.x += enemy.dx;
         
+        // Update enemy animation frame
+        enemy.animationTimer++;
+        if (enemy.animationTimer >= enemy.animationSpeed) {
+            const anim = enemy.animations[enemy.currentAnimation];
+            enemy.animationFrame = (enemy.animationFrame + 1) % anim.frames;
+            enemy.animationTimer = 0;
+        }
+
         // Remove off-screen enemies
         if (enemy.x + enemy.width < 0) {
             enemies.splice(index, 1);
