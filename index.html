@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolphin Island Adventure</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-wrapper">
+        <!-- HUD -->
+        <div class="hud">
+            <div class="hud-section">
+                <div class="player-avatar"></div>
+                <div class="player-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">HEALTH:</span>
+                        <div class="health-bar-outer">
+                            <div id="healthBar" class="health-bar-inner"></div>
+                        </div>
+                        <span id="healthText" class="stat-value">100/100</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">LEVEL:</span>
+                        <span id="level" class="stat-value">1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hud-section">
+                <div class="stat-row">
+                    <span class="stat-label">$DOLPHIN:</span>
+                    <span id="coins" class="stat-value gold">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">SCORE:</span>
+                    <span id="score" class="stat-value">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="screen-overlay">
+            <div class="screen-content">
+                <h1 class="game-title">Dolphin Island Adventure</h1>
+                <p class="game-subtitle">Unleash the power of $DOLPHIN!</p>
+                <div class="controls-info">
+                    <h3>Controls:</h3>
+                    <p>Move: <span class="key-highlight">W A S D</span> or <span class="key-highlight">Arrow Keys</span></p>
+                    <p>Attack: <span class="key-highlight">SPACEBAR</span></p>
+                </div>
+                <button class="btn btn-primary" onclick="startGame()">START DEMO (3 MIN)</button>
+                <button class="btn btn-secondary" onclick="showUpgradeScreen()">UNLOCK FULL GAME</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen-overlay" style="display: none;">
+            <div class="screen-content">
+                <h1 class="game-title">GAME OVER!</h1>
+                <p class="game-subtitle">Your adventure ends here.</p>
+                <p class="final-stats">Score: <span id="finalScore">0</span> | $DOLPHIN: <span id="finalCoins">0</span></p>
+                <button class="btn btn-primary" onclick="restartGame()">PLAY AGAIN</button>
+                <button class="btn btn-secondary" onclick="showUpgradeScreen()">UNLOCK FULL GAME</button>
+            </div>
+        </div>
+
+        <!-- Demo Expired Screen -->
+        <div id="demoExpiredScreen" class="screen-overlay" style="display: none;">
+            <div class="screen-content">
+                <h1 class="game-title">DEMO EXPIRED!</h1>
+                <p class="game-subtitle">Thanks for playing!</p>
+                <p class="final-stats">Score: <span id="demoFinalScore">0</span> | $DOLPHIN: <span id="demoFinalCoins">0</span></p>
+                <button class="btn btn-primary" onclick="showUpgradeScreen()">UNLOCK FULL GAME</button>
+                <button class="btn btn-secondary" onclick="restartGame()">RESTART DEMO</button>
+            </div>
+        </div>
+
+        <!-- Upgrade Screen -->
+        <div id="upgradeScreen" class="screen-overlay" style="display: none;">
+            <div class="screen-content upgrade-content">
+                <h1 class="game-title">UNLOCK FULL GAME</h1>
+                <p class="game-subtitle">Choose your path to unlimited adventure!</p>
+                <div class="payment-options">
+                    <div class="payment-card">
+                        <h3>💳 Pay with Card</h3>
+                        <p class="price">$9.99</p>
+                        <p>Instant access to all content.</p>
+                        <button class="btn btn-primary" onclick="payWithCard()">VISA / PAYPAL</button>
+                    </div>
+                    <div class="payment-card featured">
+                        <div class="badge">BEST VALUE</div>
+                        <h3>🐬 Pay with $DOLPHIN</h3>
+                        <p class="price">500 $DOL</p>
+                        <p>Unlock + Exclusive NFT & Rewards!</p>
+                        <button class="btn btn-primary" onclick="payWithDolphin()">CONNECT WALLET</button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="closeUpgradeScreen()">BACK TO GAME</button>
+            </div>
+        </div>
+
+        <!-- Demo Timer -->
+        <div id="demoTimer" class="demo-timer">
+            <span class="timer-icon">⏱️</span> DEMO: <span id="timeRemaining">03:00</span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="game-footer">
+        <p>Powered by <strong>Dolphin Solana</strong> 🐬 | <a href="https://dolphintokens.com" target="_blank">dolphintokens.com</a></p>
+    </footer>
+
+    <script src="game.js"></script>
+</body>
+</html>
