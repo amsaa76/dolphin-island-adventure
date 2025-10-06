@@ -43,7 +43,9 @@ const player = {
         walk: { frames: 6, row: 1, frameWidth: 100, frameHeight: 80 },
         jump: { frames: 1, row: 2, frameWidth: 100, frameHeight: 80 },
         attack: { frames: 3, row: 3, frameWidth: 100, frameHeight: 80 }
-    }
+    },
+    invincible: false,
+    invincibleTimer: 0
 };
 
 // Ground level
@@ -63,6 +65,13 @@ const enemyTypes = [
 
 // Coins
 let coinItems = [];
+
+// Power-ups
+let powerUps = [];
+const powerUpTypes = [
+    { name: "Health Potion", color: "#E74C3C", effect: "heal", value: 25, duration: 0, size: 30 },
+    { name: "Invincibility", color: "#F1C40F", effect: "invincible", value: 0, duration: 5 * 60, size: 30 } // 5 seconds
+];
 
 // Particles for effects
 let particles = [];
@@ -131,6 +140,7 @@ function startGame() {
     playerLevel = 1;
     enemies = [];
     coinItems = [];
+    powerUps = [];
     particles = [];
     player.x = 100;
     player.y = groundLevel - player.height;
@@ -141,6 +151,8 @@ function startGame() {
     player.attackCooldown = 0;
     player.currentAnimation = "idle";
     player.animationFrame = 0;
+    player.invincible = false;
+    player.invincibleTimer = 0;
 
     // Start demo timer
     demoTimeRemaining = 180;
@@ -217,6 +229,11 @@ function drawPlayer() {
     }
     ctx.translate(-player.width / 2, -player.height / 2);
 
+    // Apply invincibility flicker
+    if (player.invincible && Math.floor(player.invincibleTimer / 5) % 2 === 0) {
+        ctx.globalAlpha = 0.5;
+    }
+
     // Placeholder for actual illustrated sprite
     // In a real game, you would draw a sprite sheet frame here
     // For now, we draw a stylized dolphin using canvas API
@@ -289,6 +306,7 @@ function drawPlayer() {
         ctx.stroke();
     }
 
+    ctx.globalAlpha = 1; // Reset alpha
     ctx.restore();
 }
 
@@ -366,6 +384,29 @@ function drawCoin(coin) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("$DOL", coin.x, coin.y);
+
+    ctx.restore();
+}
+
+// Draw Power-up
+function drawPowerUp(powerUp) {
+    ctx.save();
+    const pulse = Math.sin(Date.now() / 150 + powerUp.x) * 2;
+
+    ctx.fillStyle = powerUp.color;
+    ctx.beginPath();
+    ctx.arc(powerUp.x, powerUp.y + pulse, powerUp.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(powerUp.effect === "heal" ? "+" : "★", powerUp.x, powerUp.y + pulse);
 
     ctx.restore();
 }
@@ -538,6 +579,14 @@ function updatePlayer() {
             player.attacking = false;
         }
     }
+
+    // Invincibility timer
+    if (player.invincibleTimer > 0) {
+        player.invincibleTimer--;
+        if (player.invincibleTimer === 0) {
+            player.invincible = false;
+        }
+    }
 }
 
 // Check Attack Hit
@@ -547,6 +596,7 @@ function checkAttackHit() {
         const attackRange = 80; // How far the attack reaches
         const playerAttackX = player.direction === "right" ? player.x + player.width : player.x - attackRange;
         
+        // Check for overlap with enemy bounding box
         if (player.attacking &&
             playerAttackX < enemy.x + enemy.width &&
             playerAttackX + attackRange > enemy.x &&
@@ -560,6 +610,10 @@ function checkAttackHit() {
                 playerScore += enemy.points;
                 enemies.splice(index, 1);
                 updateHUD();
+                // Chance to drop a power-up
+                if (Math.random() < 0.3) { // 30% chance
+                    spawnPowerUp(enemy.x, enemy.y);
+                }
             }
         }
     });
@@ -567,7 +621,11 @@ function checkAttackHit() {
 
 // Spawn Enemy
 function spawnEnemy() {
-    if (Math.random() < 0.005 && enemies.length < 5) { // Adjust spawn rate and max enemies
+    // Adjust spawn rate and max enemies based on player level
+    const maxEnemies = 3 + playerLevel;
+    const spawnChance = 0.005 + (playerLevel * 0.001);
+
+    if (Math.random() < spawnChance && enemies.length < maxEnemies) {
         const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
         enemies.push({
             x: canvas.width + 50,
@@ -576,7 +634,7 @@ function spawnEnemy() {
             height: type.height,
             ...type,
             maxHealth: type.health,
-            dx: -type.speed, // Move left
+            dx: -(type.speed + (playerLevel * 0.5)), // Move left, speed increases with level
             currentAnimation: "walk", // Enemies always walk
             animationFrame: 0,
             animationTimer: 0,
@@ -605,13 +663,16 @@ function updateEnemies() {
         }
         
         // Collision with player
-        if (player.x < enemy.x + enemy.width &&
+        if (!player.invincible &&
+            player.x < enemy.x + enemy.width &&
             player.x + player.width > enemy.x &&
             player.y < enemy.y + enemy.height &&
             player.y + player.height > enemy.y) {
             
             playerHealth -= enemy.damage; // Player takes damage
             createParticles(player.x + player.width / 2, player.y + player.height / 2, "#FF4136"); // Red particles for player hit
+            player.invincible = true;
+            player.invincibleTimer = 60; // 1 second invincibility
             enemies.splice(index, 1); // Enemy disappears after hitting player
             updateHUD();
             
@@ -658,6 +719,53 @@ function updateCoins() {
             updateHUD();
         }
     });
+}
+
+// Spawn Power-up
+function spawnPowerUp(x, y) {
+    const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+    powerUps.push({
+        x: x,
+        y: y,
+        dx: -2,
+        ...type
+    });
+}
+
+// Update Power-ups
+function updatePowerUps() {
+    powerUps.forEach((powerUp, index) => {
+        powerUp.x += powerUp.dx;
+
+        // Remove off-screen
+        if (powerUp.x < -powerUp.size) {
+            powerUps.splice(index, 1);
+            return;
+        }
+
+        // Check collection by player
+        const dx = powerUp.x - (player.x + player.width / 2);
+        const dy = powerUp.y - (player.y + player.height / 2);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 40) {
+            applyPowerUp(powerUp);
+            powerUps.splice(index, 1);
+        }
+    });
+}
+
+// Apply Power-up effect
+function applyPowerUp(powerUp) {
+    if (powerUp.effect === "heal") {
+        playerHealth = Math.min(playerMaxHealth, playerHealth + powerUp.value);
+        createParticles(player.x + player.width / 2, player.y + player.height / 2, "#00FF00"); // Green particles for heal
+    } else if (powerUp.effect === "invincible") {
+        player.invincible = true;
+        player.invincibleTimer = powerUp.duration; // Set invincibility duration
+        createParticles(player.x + player.width / 2, player.y + player.height / 2, "#ADD8E6"); // Blue particles for invincibility
+    }
+    updateHUD();
 }
 
 // Create Particles
@@ -713,11 +821,13 @@ function gameLoop() {
     updatePlayer();
     updateEnemies();
     updateCoins();
+    updatePowerUps(); // Update power-ups
     updateParticles();
     
     drawPlayer();
     enemies.forEach(drawEnemy);
     coinItems.forEach(drawCoin);
+    powerUps.forEach(drawPowerUp); // Draw power-ups
     drawParticles();
     
     animationId = requestAnimationFrame(gameLoop);
